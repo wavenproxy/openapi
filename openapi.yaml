@@ -1,0 +1,782 @@
+openapi: 3.0.3
+info:
+  title: Waven API
+  version: 1.0.0
+  description: |
+    # Overview
+    The Waven API is a RESTful API. The requests and responses are formated according to the
+    [JSON API](http://jsonapi.org/format/1.0/) specification.
+    
+    In addition to this documentation, we also provide an
+    [OpenAPI](https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.0.3.md) "yaml" file describing the API:
+    [Waven API Specification](openapi.yaml).
+    
+    # Authentication
+    Authentication for the Waven API is based on bearer tokens. You can obtain a bearer token by logging in to your Waven account and generating it.
+    Then, you can authenticate with the API by including the token in the `Authorization` header of your requests:
+    
+    ```
+    Authorization: Bearer <your_token>
+    ```
+    
+    # Paging
+    The Waven API supports and enforces pagination strategies for GET collection endpoints.
+    
+    #### Cursor-based paging
+    Cursor-based paging uses the query parameters `after` and `before` to specify chunk of data to be returned. Add `limit` to the parameters to choose how many items returned collection must return at most. The response will include a `cursor` object containing `after` and/or `before` field, if the next and/or previous page exists.
+    
+    Cursor-based paging is not subject to duplication if new resources are added to the collection. For example, if you are iterating through the `services` resource via `GET /services?limit=10&order=asc(created_time)`, and a new `service` is created that has a `created_time` value after the first `service`, you will not see a duplicate entry when you fetch the next page at `GET /services?limit=10&order=asc(created_time)&after=<cursor.after>`.
+
+servers:
+  - url: https://api.waven.it/v1
+
+paths:
+  /billing:
+    get:
+      summary: Get billing details
+      tags:
+        - Billing
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: query
+          schema:
+            type: string
+        - name: order
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            format: int32
+        - name: before
+          in: query
+          schema:
+            type: string
+        - name: after
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Billing details retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetBillingDetailsResponse'
+        '401':
+          description: Unauthorized
+    post:
+      summary: Create a billing detail
+      tags:
+        - Billing
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateBillingDetailsRequest'
+      responses:
+        '200':
+          description: Billing detail created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateBillingDetailsResponse'
+        '401':
+          description: Unauthorized
+        '422':
+          description: Validation error
+
+  /billing/{id}:
+    delete:
+      summary: Delete billing detail by ID
+      tags:
+        - Billing
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          description: Billing detail ID
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Billing detail deleted
+        '401':
+          description: Unauthorized
+        '422':
+          description: Validation error
+
+  /proxies/allowed-networks:
+    get:
+      summary: Get allowed proxy networks
+      tags:
+        - Proxies
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: before
+          in: query
+          schema:
+            type: string
+        - name: after
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of allowed networks
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetAllowedNetworkResponse'
+        '401':
+          description: Unauthorized
+    post:
+      summary: Add an allowed network
+      tags:
+        - Proxies
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddAllowedNetworkRequest'
+      responses:
+        '200':
+          description: Allowed network added
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AddAllowedNetworkResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ErrorResponseBase'
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        enum:
+                          - badRequest
+                      message:
+                        type: string
+                        enum:
+                          - bad request
+                      details:
+                        allOf:
+                          - $ref: '#/components/schemas/ErrorDetailsBase'
+                          - type: object
+                            properties:
+                              code:
+                                type: string
+                                enum:
+                                  - TOO_MANY_ALLOWED_NETWORKS
+                              message:
+                                type: string
+                                enum:
+                                  - too many allowed networks
+        '401':
+          description: Unauthorized
+        '422':
+          description: Validation error
+
+  /proxies/allowed-networks/{id}:
+    delete:
+      summary: Delete allowed network by ID
+      tags:
+        - Proxies
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          description: Network ID
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Allowed network deleted
+        '401':
+          description: Unauthorized
+        '422':
+          description: Validation error
+
+  /services:
+    get:
+      summary: Get services list
+      tags:
+        - Services
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: query
+          schema:
+            type: string
+        - name: order
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: before
+          in: query
+          schema:
+            type: string
+        - name: after
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of services
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetServiceResponse'
+        '401':
+          description: Unauthorized
+    post:
+      summary: Create a service
+      tags:
+        - Services
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateServiceRequest'
+      responses:
+        '200':
+          description: Service created
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ErrorResponseBase'
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        enum:
+                          - badRequest
+                      message:
+                        type: string
+                        enum:
+                          - bad request
+                      details:
+                        allOf:
+                          - $ref: '#/components/schemas/ErrorDetailsBase'
+                          - type: object
+                            properties:
+                              code:
+                                type: string
+                                enum:
+                                  - PASSWORD_MUST_BE_SET
+                                  - TOO_MANY_PENDING_SERVICES
+                              message:
+                                type: string
+                                enum:
+                                  - password  must be set
+                                  - too many pending services
+        '401':
+          description: Unauthorized
+        '422':
+          description: Validation error
+
+  /services/{id}:
+    patch:
+      summary: Update a service by ID
+      tags:
+        - Services
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          description: Service ID
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateServiceRequest'
+      responses:
+        '200':
+          description: Service updated
+        '401':
+          description: Unauthorized
+        '422':
+          description: Validation error
+
+    delete:
+      summary: Delete a service by ID
+      tags:
+        - Services
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          description: Service ID
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Service deleted
+        '401':
+          description: Unauthorized
+
+  /services/{id}/change-ip:
+    post:
+      summary: Change IP of a service by ID
+      tags:
+        - Services
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          description: Service ID
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangeServiceIPRequest'
+      responses:
+        '200':
+          description: Service IP changed
+        '401':
+          description: Unauthorized
+        '422':
+          description: Validation error
+
+  /invoices:
+    get:
+      summary: Get invoices list
+      tags:
+        - Invoices
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [CREATED, PAID, EXPIRED]
+        - name: order
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: before
+          in: query
+          schema:
+            type: string
+        - name: after
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of invoices
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetInvoicesResponse'
+        '401':
+          description: Unauthorized
+
+components:
+  schemas:
+    AddAllowedNetworkRequest:
+      type: object
+      properties:
+        network:
+          type: string
+          pattern: '^([0-9]{1,3}\.){3}[0-9]{1,3}(/([0-9]|[1-2][0-9]|3[0-2]))$'
+      required:
+        - network
+
+    AddAllowedNetworkResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        network:
+          type: string
+
+    GetAllowedNetworkResponse:
+      type: object
+      properties:
+        cursor:
+          type: object
+          nullable: true
+          description: Pagination cursor (optional)
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              network:
+                type: string
+
+    DeleteAllowedNetworkRequest:
+      type: object
+      properties:
+        network_id:
+          type: string
+
+    RerouteProxyRequestPayload:
+      type: object
+      properties:
+        target_id:
+          type: string
+      required:
+        - target_id
+
+    Service:
+      type: object
+      properties:
+        id:
+          type: string
+        start_at:
+          type: string
+          format: date-time
+          nullable: true
+        end_at:
+          type: string
+          format: date-time
+          nullable: true
+        status:
+          type: string
+          nullable: true
+          description: Service status enum
+        traffic_mb_amount:
+          type: integer
+          format: int64
+          nullable: true
+        remaining_mb_amount:
+          type: integer
+          format: int64
+          nullable: true
+        automatic_ip_change_interval:
+          type: string
+          nullable: true
+          description: Duration like '5m'
+        endpoints:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              host:
+                type: string
+              port:
+                type: integer
+              type:
+                type: string
+
+    GetServiceResponse:
+      type: object
+      properties:
+        cursor:
+          type: object
+          nullable: true
+          description: Pagination cursor (optional)
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Service'
+
+    CreateServiceRequest:
+      type: object
+      properties:
+        plan_id:
+          type: string
+        payment_method:
+          type: string
+          enum: [STRIPE, COINBASE]
+        traffic_gb_amount:
+          type: integer
+          nullable: true
+        is_recurring:
+          type: boolean
+        billing_detail_id:
+          type: string
+      required:
+        - plan_id
+        - billing_detail_id
+
+    UpdateServiceRequest:
+      type: object
+      properties:
+        start_at:
+          type: string
+          format: date-time
+          nullable: true
+        end_at:
+          type: string
+          format: date-time
+          nullable: true
+        status:
+          type: string
+          nullable: true
+        traffic_mb_amount:
+          type: integer
+          format: int64
+          nullable: true
+        remaining_mb_amount:
+          type: integer
+          format: int64
+          nullable: true
+        automatic_ip_change_interval:
+          type: string
+          nullable: true
+        endpoints:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              host:
+                type: string
+              port:
+                type: integer
+              type:
+                type: string
+
+    DeleteServiceRequest:
+      type: object
+      properties:
+        id:
+          type: string
+
+    ChangeServiceIPRequest:
+      type: object
+      properties:
+        id:
+          type: string
+
+    BillingDetail:
+      type: object
+      properties:
+        id:
+          type: string
+        first_name:
+          type: string
+          nullable: true
+        middle_name:
+          type: string
+          nullable: true
+        last_name:
+          type: string
+          nullable: true
+        tax_id:
+          type: string
+        address_line_one:
+          type: string
+        address_line_two:
+          type: string
+          nullable: true
+        city:
+          type: string
+        country:
+          type: string
+        company_name:
+          type: string
+          nullable: true
+
+    GetBillingDetailsResponse:
+      type: object
+      properties:
+        cursor:
+          type: object
+          nullable: true
+          description: Pagination cursor (optional)
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/BillingDetail'
+
+    CreateBillingDetailsRequest:
+      type: object
+      properties:
+        first_name:
+          type: string
+          nullable: true
+        middle_name:
+          type: string
+          nullable: true
+        last_name:
+          type: string
+          nullable: true
+        tax_id:
+          type: string
+        address_line_one:
+          type: string
+        address_line_two:
+          type: string
+          nullable: true
+        city:
+          type: string
+        country:
+          type: string
+        company_name:
+          type: string
+          nullable: true
+      required:
+        - tax_id
+        - address_line_one
+        - city
+        - country
+
+    CreateBillingDetailsResponse:
+      $ref: '#/components/schemas/BillingDetail'
+
+    Invoice:
+      type: object
+      properties:
+        id:
+          type: string
+        service:
+          $ref: '#/components/schemas/Service'
+        total_amount:
+          type: integer
+          format: int64
+        plan_quantity:
+          type: integer
+          format: int64
+        payment_method:
+          type: string
+        status:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    GetInvoicesResponse:
+      type: object
+      properties:
+        cursor:
+          type: object
+          nullable: true
+          description: Pagination cursor (optional)
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Invoice'
+
+    Proxy:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int32
+        start_at:
+          type: string
+          format: date-time
+          nullable: true
+        end_at:
+          type: string
+          format: date-time
+          nullable: true
+        traffic_bytes:
+          type: integer
+          format: int64
+          nullable: true
+        traffic_bytes_used:
+          type: integer
+          format: int64
+          nullable: true
+
+    GetProxiesResponse:
+      type: object
+      properties:
+        cursor:
+          type: object
+          nullable: true
+          description: Pagination cursor (optional)
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Proxy'
+
+    ErrorResponseBase:
+      type: object
+      required:
+        - code
+        - message
+        - details
+      properties:
+        code:
+          type: string
+          description: high-level machine-readable error code
+        message:
+          type: string
+          description: human-readable summary
+        details:
+          $ref: '#/components/schemas/ErrorDetailsBase'
+
+    ErrorDetailsBase:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          description: machine-readable sub-error code
+        message:
+          type: string
+          description: human-readable sub-error message
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
